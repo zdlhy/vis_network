@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Document</title>
+    <link rel="stylesheet" href="styles/font-awesome.min.css">
+    <link rel="stylesheet" href="styles/vis-network.min.css">
+    <link rel="stylesheet" href="styles/jquery.autocompleter.css">
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/animate.min.css">
+    <script src="javascripts/jquery.min.js"></script>
+    <script src="javascripts/swiper-3.4.2.min.js"></script>
+    <script src="javascripts/swiper.animate1.0.2.min.js"></script>
+    <script src="javascripts/jquery.autocompleter.js"></script>
+    <script src="javascripts/vis-network.min.js"></script>
+</head>
+
+<body>
+</body>
+<div id="msg">
+    <div><span class="t1"></span><span>企业</span></div>
+    <!-- <div><span class="t2"></span><span>人员</span></div> -->
+    <div><span class="t2"></span><span>行业</span></div>
+</div>
+<div id="menu">
+    <div>公司持股</div>
+    <div>个人持股</div>
+    <div>投标</div>
+    <div>法人</div>
+    <div>股东</div>
+    <div>职员</div>
+</div>
+<div id="search">
+    <span>关系种类：</span>
+    <div>
+        <input type="text" class="s_input">
+    </div>
+    <span>距离：</span>
+    <div class="ac">
+        <select>
+            <option value="1">1</option>
+            <option value="2" selected>2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+        </select>
+        <button class="btn">查询</button>
+    </div>
+</div>
+<div id="baseMsg">
+    <div class="box1">
+        <h6>公司信息</h6>
+        <div class="msg_name"><i>名称：</i><span>文本测试文本测试文本测试文本测试文本测试文本测试</span></div>
+        <div class="Msg_adress"><i>地址：</i><span></span></div>
+        <div class="Msg_type"><i>行业类型名称：</i><span></span></div>
+        <div class="Msg_time"><i>成立时间：</i><span></span></div>
+        <div class="Msg_zb"><i>注册资本：</i><span></span></div>
+        <div class="Msg_jy"><i>经营范围：</i><span></span></div>
+    </div>
+    <div class="box2">
+        <h6>个人信息</h6>
+        <div class="per_name"><i>名称：</i><span></span></div>
+        <div class="per_num"><i>证件类型号码：</i><span></span></div>
+    </div>
+</div>
+<div id="wrapper">
+    <!-- <div id="loadingBar">
+            <div class="outerBorder">
+                <div id="text">0%</div>
+                <div id="border">
+                    <div id="bar"></div>
+                </div>
+            </div>
+        </div> -->
+    <div id="mynetwork" class="swiper-container ani" swiper-animate-effect="fadeInUp" swiper-animate-duration="0.5s" swiper-animate-delay="0.3s"></div>
+</div>
+
+</html>
+<script>
+$('.btn').on('click', function(e) {
+    // $('#msg').hide();
+    e.preventDefault();
+    var anim = 'bounceInDown';
+    testAnim(anim);
+    $('#mynetwork').css('visibility', 'initial');
+    setTimeout(function() {
+        $('#msg').css('display', 'block');
+
+    }, 500);
+});
+
+function testAnim(x) {
+    $('#mynetwork').removeClass().addClass(x + ' animated').one('webkitAnimationEnd mozAnimationEnd MSAnimationEnd oanimationend animationend', function() {
+        $(this).removeClass();
+    });
+};
+</script>
+<script type="text/javascript">
+var host = 'http://1.119.49.62:7474/' //数据服务器地址(以斜杠结尾)
+    // var host = 'http://192.168.99.100:7474/' //数据服务器地址(以斜杠结尾)
+
+
+
+var source = [];
+var nodes = new Set();
+var edges = new Set();
+// create a network
+var container = document.getElementById('mynetwork');
+var type_r = ''; //检索关系种类
+
+/*--------------检索关系----------------*/
+// http://dc:7474/db/data/cypher
+// fn('公司', '.s_input');
+$('.btn').on('click', function() {
+    nodes = new Set();
+    edges = new Set();
+    aa.clear();
+    bb.clear();
+    type_r = $('.s_input').val();
+    if (type_r == '') {
+        alert('请填写完整信息！');
+        return;
+    }
+    var l = $('.ac select').val();
+    // console.log(l);
+    $.ajax({
+        url: host + 'db/data/cypher',
+        type: 'post',
+        async: false,
+        accept: 'application/json; charset=UTF-8',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            "query": "MATCH c=()-[:" + type_r + "*1.." + l + "]->() RETURN c LIMIT 25",
+            "params": {}
+        }),
+        success: function(res) {
+            console.log(res);
+            // console.log(res.data.length);
+            if (res.data.length == 0) {
+                alert('两公司无距离为' + l + '关系');
+                return;
+            }
+            for (var i = 0; i < res.data.length; i++) {
+                // console.log(i + ':' + res.data[i][0].nodes.length);
+                for (var j = 0; j < res.data[i][0].nodes.length; j++) {
+                    var arr = res.data[i][0].nodes[j].split('/');
+                    var nodeId = arr[arr.length - 1];
+                    // console.log(nodeId);
+                    nodes.add(nodeId);
+                }
+                for (var j = 0; j < res.data[i][0].relationships.length; j++) {
+                    var arr = res.data[i][0].relationships[j].split('/');
+                    var lineId = arr[arr.length - 1];
+                    // console.log(lineId);
+                    edges.add(lineId);
+                }
+            };
+            for (var i of nodes) {
+                // console.log(i);
+                var node = getNode(host + 'db/data/node/' + i);
+                var _name = '';
+                if(node.name_qy == ''||node.name_qy == null){
+                    _name = node.Name_hy;
+                }else{
+                    _name = node.name_qy;
+                }
+                if(node.faren == ''||node.faren == null){
+                    _name = node.name_qy;
+                }else{
+                    _name = node.faren;
+                }
+                aa.add({
+                    'group': node.Type,
+                    'id': node.Id,
+                    'label': _name,
+                    'title': node.Name
+                })
+            }
+            for (var i of edges) {
+                var line = getLine(host + 'db/data/relationship/' + i);
+                // console.log(line);
+                bb.add({
+                    'id': line.Id,
+                    'from': line.From,
+                    'to': line.To,
+                    'label': line.Label,
+                    'arrows': 'to',
+                    'color': line.Color,
+                });
+            }
+            newScene()
+
+        }
+    })
+});
+/*--------------检索公司关系结束----------------*/
+
+
+/*-----检索关系种类-----*/
+var Type = '';
+var Name = '';
+$.ajax({
+    url: host + 'db/data/relationship/types',
+    type: 'get',
+    async: false,
+    Accept: 'application/json; charset=UTF-8',
+    success: function(res) {
+        console.log(res);
+        source = [];
+        for (var i = 0; i < res.length; i++) {
+            source.push({
+                "label": res[i]
+            });
+        }
+        $('.s_input').autocompleter('destroy');
+        $('.s_input').autocompleter({
+            source: source,
+            highlightMatches: true,
+            limit: 1000,
+            hint: true,
+        });
+    }
+});
+var data = {};
+var aa = new vis.DataSet();
+var bb = new vis.DataSet();
+var clickId = '';
+var guanxi = [];
+
+function newScene() {
+    var nodes_data = [];
+    var edges_data = [];
+    data = {
+        nodes: aa,
+        edges: bb
+    };
+    var options = {
+        groups: {
+            企业: {
+                'shape': 'circularImage',
+                'image': 'images/icon-qiye.png',
+                'color': '#28a8ff',
+                'size':12
+            },
+            人员: {
+                shape: 'circularImage',
+                'image': 'images/icon-gudong.png',
+                'size': 12,
+                'color': '#ff5750',
+            },
+            行业:{
+                 shape: 'circularImage',
+                'image': 'images/icon-gudong.png',
+                'size': 12,
+                'color': '#ff5750',
+            }
+        },
+        edges: {
+            "width": 2,
+            'color': '#ccc',
+            "arrows": {
+                "to": {
+                    "enabled": true,
+                    "scaleFactor": 0.5
+                }
+            },
+            "font": {
+                size: 6,
+                color: '#666',
+                align: 'middle',
+            },
+            // "smooth": {
+            //     // "type": "cubicBezier",
+            //     "forceDirection": "vertical",
+            //     // "roundness": 0.35
+            // }
+        },
+        // "physics": {
+        //     "barnesHut": {
+        //         // "springLength": 100,
+        //         // "springConstant": 0.03,
+        //         // "avoidOverlap": 0.5,
+        //         // "damping": 0.5,
+        //         // "centralGravity": 0.5,
+        //     },
+        //     // "minVelocity": 0.75,
+        //     // "timestep": 0.1,
+        //     // "minVelocity": 1,
+        //     // "solver": "repulsion"
+        // }
+    };
+    var network = new vis.Network(container, data, options);
+    setTimeout(function() {
+        network.redraw();
+    }, 100);
+    network.on("click", function(params) {
+        var _this = this;
+        clickId = '';
+        params.event = "[original event]";
+        if (_this.getNodeAt(params.pointer.DOM) == null) {
+            return;
+        } else {
+            clickId = _this.getNodeAt(params.pointer.DOM);
+            // inC(clickId);
+            // outC(clickId);
+        }
+    })
+    $('#mynetwork').on('contextmenu', function(ev) {
+        network.on("oncontext", function(params) {
+            params.event = "[original event]";
+            var clickId = this.getNodeAt(params.pointer.DOM);
+            aa.remove([clickId]);
+        });
+        ev.preventDefault();
+    });
+};
+
+/*------单击菜单事件--------*/
+$('#mynetwork').on('click', function(ev) {
+    var x = ev.pageX;
+    var y = ev.pageY;
+    if (clickId == '') {
+        // alert(1);
+        $('#menu').css('display', 'none');
+    } else {
+        $.ajax({
+            url: host + 'db/data/node/' + clickId + '/relationships/all',
+            type: 'get',
+            async: false,
+            accept: 'application/json;charset=UTF-8',
+            success: function(res) {
+                var navList = new Set();
+                for (var i = 0; i < res.length; i++) {
+                    navList.add(res[i].type)
+                }
+                var _html = '';
+                for (var i of navList) {
+                    console.log(i);
+                    var _type = '';
+                    switch (i) {
+                        case '公司持股':
+                            _type = '公司';
+                            break;
+                        case '个人持股':
+                            _type = '股东';
+                            break;
+                        case '职务':
+                            _type = '职员';
+                            break;
+                        case '投标':
+                            _type = '投标';
+                            break;
+                        case '自然人股东':
+                            _type = '自然人股东';
+                            break;
+                        case '法定代表人':
+                            _type = '法定代表人';
+                            break;
+                        case '外国地区企业':
+                            _type = '外国地区企业';
+                            break;
+                    }
+                    _html += '<div>' + _type + '</div>';
+                }
+                $('#menu').html(_html);
+            }
+        });
+        $('#menu').css({
+            'display': 'block',
+            'top': y,
+            'left': x
+        });
+        $('#menu div').on('click', function() {
+            $('#menu').css('display', 'none');
+            inC(clickId, '', $(this).html());
+            outC(clickId, '', $(this).html());
+        });
+    }
+});
+/*-------根节点-----------*/
+function getRoot(Type, Name) {
+    $.ajax({
+        url: host + 'db/data/cypher',
+        type: 'post',
+        async: false,
+        accept: 'application/json;charset=UTF-8',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            "query": "MATCH (n:" + Type + " {名称: '" + Name + "'}) RETURN n",
+        }),
+        success: function(res) {
+            // console.log(res);
+            rootId = res.data[0][0].metadata.id
+                /* var node = res.data[0][0].metadata.id + ',' + res.data[0][0].data.名称 + ',' + res.data[0][0].metadata.labels[0];
+                 nodes.add(node);*/
+            if (res.data[0][0].metadata.labels[0] == '公司' || res.data[0][0].metadata.labels[0] == '企业' || res.data[0][0].metadata.labels[0] == '项目') {
+                aa.add({
+                    'group': res.data[0][0].metadata.labels[0],
+                    'id': res.data[0][0].metadata.id,
+                    // 'label': '<p class="nodeLabel" style="color:red;">' + res.data[0][0].data.名称 + '<p>',
+                    'label': res.data[0][0].data.名称,
+                    'font': {
+                        'multi': true,
+                    },
+                    'title': res.data[0][0].data.名称
+                })
+            } else {
+                aa.add({
+                    'group': res.data[0][0].metadata.labels[0],
+                    'id': res.data[0][0].metadata.id,
+                    'label': res.data[0][0].data.名称,
+                    'font': {
+                        'multi': true,
+                    },
+                    // 'title':''
+                    // 'fixed':true
+                    // 'physics': false
+                })
+            }
+
+            inC(res.data[0][0].metadata.id, res.data[0][0].incoming_relationships);
+            outC(res.data[0][0].metadata.id, res.data[0][0].outgoing_relationships);
+        }
+    })
+}
+/*----------关系线(in)--------------*/
+/*----------关系线(in)--------------*/
+function inC(endId, url, gx_type) {
+    console.log(gx_type);
+    if (url == null || url == '') {
+        /*-------点击节点时加载-----------*/
+        url = host + 'db/data/node/' + endId + '/relationships/in';
+        $.ajax({
+            url: url,
+            type: 'get',
+            async: false,
+            accept: 'application/json; charset=UTF-8',
+            success: function(res) {
+                console.log(res);
+                for (var i = 0; i < res.length; i++) {
+                    var line_type = res[i].metadata.type; //关系种类
+                    var line_id = res[i].metadata.id; //关系id
+                    // console.log('line_id'+line_id);
+                    var line_data = res[i].data; //关系数据
+                    var line_style = '';
+                    switch (line_type) {
+                        case '公司持股':
+                            line_style = '#ff756e';
+                            break;
+                        case '个人持股':
+                            line_style = '#68bdf6';
+                            break;
+                        case '职务':
+                            line_style = '#ccc';
+                            break;
+                    }
+                    if (gx_type == null) {
+                        for (var j = 0; j < guanxi.length; j++) {
+                            if (line_type == guanxi[j]) {
+                                var starNode = getNode(res[i].start); //关系节点信息
+                                if (aa.get(starNode.Id) == null) {
+                                    if (starNode.Type == '公司' || starNode.Type == '企业' || starNode.Type == '项目') {
+                                        aa.add({
+                                            'group': starNode.Type,
+                                            'id': starNode.Id,
+                                            'label': starNode.Name,
+                                            'title': starNode.Name
+                                                // 'physics': false
+                                                // 'font':{'size':fontSize}
+                                        })
+                                    } else {
+                                        aa.add({
+                                            'group': starNode.Type,
+                                            'id': starNode.Id,
+                                            'label': starNode.Name,
+                                            // 'title': starNode.Name
+                                            // 'physics': false
+                                            // 'font':{'size':fontSize}
+                                        })
+                                    }
+                                }
+                                if (bb.get(line_id) == null) {
+                                    bb.add({
+                                        'from': starNode.Id,
+                                        'to': endId,
+                                        // 'label': line_data,
+                                        'label': line_type,
+                                        'id': line_id,
+                                        'arrows': 'to',
+                                        'color': {
+                                            color: line_style
+                                        }
+                                    })
+                                }
+                            }
+                        }
+                    } else {
+                        switch (gx_type) {
+                            case '公司':
+                                gx_type = '公司持股';
+                                break;
+                            case '股东':
+                                gx_type = '个人持股';
+                                break;
+                            case '职员':
+                                gx_type = '职务';
+                                break;
+                            case '投标':
+                                gx_type = '投标';
+                                break;
+                            case '自然人股东':
+                                gx_type = '自然人股东';
+                                break;
+                            case '法定代表人':
+                                gx_type = '法定代表人';
+                                break;
+                            case '外国地区企业':
+                                gx_type = '外国地区企业';
+                                break;
+                        }
+                        if (line_type == gx_type) {
+                            var starNode = getNode(res[i].start); //关系节点信息
+                            if (aa.get(starNode.Id) == null) {
+                                if (starNode.Type == '公司' || starNode.Type == '企业' || starNode.Type == '项目') {
+                                    aa.add({
+                                        'group': starNode.Type,
+                                        'id': starNode.Id,
+                                        'label': starNode.Name,
+                                        'title': starNode.Name
+                                            // 'physics': false
+                                            // 'font':{'size':fontSize}
+                                    })
+                                } else {
+                                    aa.add({
+                                        'group': starNode.Type,
+                                        'id': starNode.Id,
+                                        'label': starNode.Name,
+                                        // 'title': starNode.Name
+                                        // 'physics': false
+                                        // 'font':{'size':fontSize}
+                                    })
+                                }
+                            }
+                            if (bb.get(line_id) == null) {
+                                bb.add({
+                                    'from': starNode.Id,
+                                    'to': endId,
+                                    // 'label': line_data,
+                                    'label': line_type,
+                                    'id': line_id,
+                                    'arrows': 'to',
+                                    'color': {
+                                        color: line_style
+                                    }
+                                })
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        // return;
+    }
+    $.ajax({
+        url: url,
+        type: 'get',
+        async: false,
+        accept: 'application/json; charset=UTF-8',
+        success: function(res) {
+            console.log(res);
+            for (var i = 0; i < res.length; i++) {
+                var line_type = res[i].metadata.type; //关系种类
+                var line_id = res[i].metadata.id; //关系种类
+                // console.log(line_type);
+                var line_data = res[i].data; //关系数据
+                var line_style = '';
+                switch (line_type) {
+                    case '公司持股':
+                        line_style = '#ff756e';
+                        break;
+                    case '个人持股':
+                        line_style = '#68bdf6';
+                        break;
+                    case '职务':
+                        line_style = '#ccc';
+                        break;
+                }
+                for (var j = 0; j < guanxi.length; j++) {
+                    switch (guanxi[j]) {
+                        case '公司':
+                            guanxi[j] = '公司持股';
+                            break;
+                        case '股东':
+                            guanxi[j] = '个人持股';
+                            break;
+                        case '职员':
+                            guanxi[j] = '职务';
+                            break;
+                        case '投标':
+                            guanxi[j] = '投标';
+                            break;
+                        case '自然人股东':
+                            guanxi[j] = '自然人股东';
+                            break;
+                        case '法定代表人':
+                            guanxi[j] = '法定代表人';
+                            break;
+                    }
+                    if (line_type == guanxi[j]) {
+                        var starNode = getNode(res[i].start); //关系节点信息
+                        if (aa.get(starNode.Id) == null) {
+                            if (starNode.Type == '公司' || starNode.Type == '企业' || starNode.Type == '项目') {
+                                aa.add({
+                                    'group': starNode.Type,
+                                    'id': starNode.Id,
+                                    'label': starNode.Name,
+                                    'title': starNode.Name
+                                        // 'physics': false
+                                        // 'font':{'size':fontSize}
+                                })
+                            } else {
+                                aa.add({
+                                    'group': starNode.Type,
+                                    'id': starNode.Id,
+                                    'label': starNode.Name,
+                                    // 'title': starNode.Name
+                                    // 'physics': false
+                                    // 'font':{'size':fontSize}
+                                })
+                            }
+                        }
+                        if (bb.get(line_id) == null) {
+                            bb.add({
+                                'id': line_id,
+                                'from': starNode.Id,
+                                'to': endId,
+                                // 'label': line_data,
+                                'label': line_type,
+                                'arrows': 'to',
+                                'color': {
+                                    color: line_style
+                                }
+                            })
+                        }
+                    }
+                }
+
+            }
+        }
+    })
+}
+
+function outC(starId, url, gx_type) {
+    if (url == null || url == '') {
+        url = host + 'db/data/node/' + starId + '/relationships/out'
+        $.ajax({
+            url: url,
+            type: 'get',
+            async: false,
+            accept: 'application/json; charset=UTF-8',
+            success: function(res) {
+                console.log(res);
+                for (var i = 0; i < res.length; i++) {
+                    var line_type = res[i].metadata.type; //关系种类
+                    var line_id = res[i].metadata.id; //关系线ID
+                    // console.log('line_id:' + line_id);
+                    var line_style = '';
+                    switch (line_type) {
+                        case '公司持股':
+                            line_style = '#ff756e';
+                            break;
+                        case '个人持股':
+                            line_style = '#68bdf6';
+                            break;
+                        case '职务':
+                            line_style = '#ccc';
+                            break;
+                    }
+                    if (gx_type == '') {
+                        for (var j = 0; j < guanxi.length; j++) {
+                            if (line_type == guanxi[j]) {
+                                var endNode = getNode(res[i].end); //关系节点信息
+                                if (aa.get(endNode.Id) == null) {
+                                    if (endNode.Type == '公司' || endNode.Type == '企业' || endNode.Type == '项目') {
+                                        aa.add({
+                                            'group': endNode.Type,
+                                            'id': endNode.Id,
+                                            'label': endNode.Name,
+                                            'title': endNode.Name
+                                                // 'physics': false
+                                                // 'font':{'size':fontSize}
+                                        })
+                                    } else {
+                                        aa.add({
+                                            'group': endNode.Type,
+                                            'id': endNode.Id,
+                                            'label': endNode.Name,
+                                        })
+                                    }
+                                }
+                                if (bb.get(line_id) == null) {
+                                    bb.add({
+                                        'id': line_id,
+                                        'from': starId,
+                                        'to': endNode.Id,
+                                        // 'label': line_data,
+                                        'label': line_type,
+                                        'arrows': 'to',
+                                        'color': {
+                                            color: line_style
+                                        }
+                                    })
+                                }
+                            }
+                        }
+                    } else {
+                        switch (gx_type) {
+                            case '公司':
+                                gx_type = '公司持股';
+                                break;
+                            case '股东':
+                                gx_type = '个人持股';
+                                break;
+                            case '职员':
+                                gx_type = '职务';
+                                break;
+                            case '投标':
+                                gx_type = '投标';
+                                break;
+                            case '自然人股东':
+                                gx_type = '自然人股东';
+                                break;
+                            case '法定代表人':
+                                gx_type = '法定代表人';
+                                break;
+                            case '外国地区企业':
+                                gx_type = '外国地区企业';
+                                break;
+                        }
+                        if (line_type == gx_type) {
+                            var endNode = getNode(res[i].end); //关系节点信息
+                            if (aa.get(endNode.Id) == null) {
+                                if (endNode.Type == '公司' || endNode.Type == '企业' || endNode.Type == '项目') {
+                                    aa.add({
+                                        'group': endNode.Type,
+                                        'id': endNode.Id,
+                                        'label': endNode.Name,
+                                        'title': endNode.Name
+                                            // 'physics': false
+                                            // 'font':{'size':fontSize}
+                                    })
+                                } else {
+                                    aa.add({
+                                        'group': endNode.Type,
+                                        'id': endNode.Id,
+                                        'label': endNode.Name,
+                                    })
+                                }
+                            }
+                            if (bb.get(line_id) == null) {
+                                bb.add({
+                                    'id': line_id,
+                                    'from': starId,
+                                    'to': endNode.Id,
+                                    // 'label': line_data,
+                                    'label': line_type,
+                                    'arrows': 'to',
+                                    'color': {
+                                        color: line_style
+                                    }
+                                })
+                            }
+                        }
+                    }
+
+                }
+            }
+        })
+        return;
+    }
+    $.ajax({
+        url: url,
+        type: 'get',
+        async: false,
+        accept: 'application/json; charset=UTF-8',
+        success: function(res) {
+            console.log(res);
+            for (var i = 0; i < res.length; i++) {
+                var line_type = res[i].metadata.type; //关系种类
+                var line_id = res[i].metadata.id; //关系线ID
+                // console.log(type);
+                var line_style = '';
+                switch (line_type) {
+                    case '公司持股':
+                        line_style = '#ff756e';
+                        break;
+                    case '个人持股':
+                        line_style = '#68bdf6';
+                        break;
+                    case '职务':
+                        line_style = '#ccc';
+                        break;
+                }
+
+                for (var j = 0; j < guanxi.length; j++) {
+                    switch (guanxi[j]) {
+                        case '公司':
+                            guanxi[j] = '公司持股';
+                            break;
+                        case '股东':
+                            guanxi[j] = '个人持股';
+                            break;
+                        case '职员':
+                            guanxi[j] = '职务';
+                            break;
+                        case '投标':
+                            guanxi[j] = '投标';
+                            break;
+                        case '自然人股东':
+                            guanxi[j] = '自然人股东';
+                            break;
+                        case '法定代表人':
+                            guanxi[j] = '法定代表人';
+                            break;
+                    }
+                    if (line_type == guanxi[j]) {
+                        var endNode = getNode(res[i].end); //关系节点信息
+                        if (aa.get(endNode.Id) == null) {
+                            if (endNode.Type == '公司' || endNode.Type == '企业' || endNode.Type == '项目') {
+                                aa.add({
+                                    'group': endNode.Type,
+                                    'id': endNode.Id,
+                                    'label': endNode.Name,
+                                    'title': endNode.Name
+                                })
+                            } else {
+                                aa.add({
+                                    'group': endNode.Type,
+                                    'id': endNode.Id,
+                                    'label': endNode.Name,
+                                })
+                            }
+                        }
+                        if (bb.get(line_id) == null) {
+                            bb.add({
+                                'id': line_id,
+                                'from': starId,
+                                'to': endNode.Id,
+                                'label': line_type,
+                                'arrows': 'to',
+                                'color': {
+                                    color: line_style
+                                }
+                            })
+                        }
+                    }
+                }
+
+            }
+        }
+    })
+}
+
+function getNode(url) {
+    var obj = {};
+    $.ajax({
+        url: url,
+        type: 'get',
+        async: false, //同步执行，执行完ajax后执行下面的文件
+        accept: 'application/json; charset=UTF-8',
+        success: function(res) {
+            console.log(res);
+            obj = {
+                Type: res.metadata.labels[0],
+                Id: res.metadata.id,
+                Name_hy: res.data.行业,
+                Name_num: res.data.代码,
+                name_qy:res.data.名称,
+                faren: res.data.法定代表人姓名
+            };
+        }
+    });
+    return obj;
+}
+
+function getLine(url) {
+    var obj = {};
+    $.ajax({
+        url: url,
+        type: 'get',
+        async: false, //同步执行，执行完ajax后执行下面的文件
+        accept: 'application/json; charset=UTF-8',
+        success: function(res) {
+            // console.log(res);
+            var s = res.start.split('/');
+            var t = res.end.split('/');
+            // console.log(res.data.length);
+            // var line_title = res.data.名称==''?data.type:res.data.名称;
+            var line_title = res.type;
+            /*if(res.data.名称!=''){
+                console.log(1);
+                line_title = res.data.名称;
+            }else{
+                line_title = res.type;
+                console.log(2);
+            }
+            console.log(line_title);*/
+            /*switch(){
+
+            }*/
+            obj = {
+                Id: res.metadata.id,
+                From: s[s.length - 1],
+                To: t[t.length - 1],
+                Label: line_title,
+                Arrows: 'to',
+                Color: '#ff756e'
+            };
+        }
+    });
+    return obj;
+}
+</script>
